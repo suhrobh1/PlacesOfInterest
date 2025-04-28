@@ -23,55 +23,91 @@ const getCityCoordinates = async (city) => {
   }
 };
 
+
+
+
 app.post("/places", async (req, res) => {
-  const { city } = req.body;
-
-  console.log("Microservice received:", { city });
-
-  if (!city) {
-    return res.status(400).json({ error: "Invalid request format: city is required" });
-  }
+  const { city, latitude, longitude } = req.body;
+  console.log("Microservice received:", { city }, {latitude}, {longitude});
 
   try {
-    const { latitude, longitude } = await getCityCoordinates(city);
 
-    const foursquareRes = await axios.get("https://api.foursquare.com/v3/places/search", {
-      headers: {
-        Authorization: "fsq3uDkptSDSbHS+pVTqTZBvfjl9Zx3Ak/xlUXC9v8rAeAU=",
-      },
-      params: {
-        ll: `${latitude},${longitude}`,
-        radius: 5000,
-        categories: "16000", // Landmarks, museums, historical buildings
-        limit: 20,
-      },
-    });
+    if (city){
+      const { latitude, longitude } = await getCityCoordinates(city);
+      console.log("in (if city)", latitude, longitude)
+          const foursquareRes = await axios.get("https://api.foursquare.com/v3/places/search", {
+            headers: {
+              Authorization: "fsq3uDkptSDSbHS+pVTqTZBvfjl9Zx3Ak/xlUXC9v8rAeAU=",
+            },
+            params: {
+              ll: `${latitude},${longitude}`,
+              radius: 10000,
+              categories: "16000", // Landmarks, museums, historical buildings
+              limit: 20,
+            },
+          });
+          res.json({ city, places: poiProcessor(foursquareRes) }); 
+    }else if( latitude && longitude){
+      console.log("in (if lat/ lon", latitude, longitude)
+        const foursquareRes = await axios.get("https://api.foursquare.com/v3/places/search", {
+          headers: {
+            Authorization: "fsq3uDkptSDSbHS+pVTqTZBvfjl9Zx3Ak/xlUXC9v8rAeAU=",
+          },
+          params: {
+            ll: `${latitude},${longitude}`,
+            radius: 10000,
+            categories: "16000", // Landmarks, museums, historical buildings
+            limit: 20,
+          },
+        });
+          res.json({ city, places: poiProcessor(foursquareRes) }); 
+    }else{
+      return res.status(400).json({ error: "City or Latitude/Longitude is required! " });
+    }
 
-    const places = foursquareRes.data.results.map((place) => ({
-      name: place.name,
-      address: place.location?.formatted_address || "",
-      categories: place.categories?.map((c) => c.name) || [],
-      distance: place.distance,
-      lat: place.geocodes?.main?.latitude,
-      lng: place.geocodes?.main?.longitude,
-    }));
+    // const places = foursquareRes.data.results.map((place) => ({
+    //   name: place.name,
+    //   address: place.location?.formatted_address || "",
+    //   categories: place.categories?.map((c) => c.name) || [],
+    //   distance: place.distance,
+    //   lat: place.geocodes?.main?.latitude,
+    //   lng: place.geocodes?.main?.longitude,
+    // }));
 
-    res.status(200).json({
-      city,
-      coordinates: { latitude, longitude },
-      places,
-    });
+    // res.status(200).json({
+    //   city,
+    //   coordinates: { latitude, longitude },
+    //   places,
+    // });
   } catch (error) {
     console.error("Error fetching places:", error.message);
     res.status(500).json({ error: "Failed to fetch places of interest" });
   }
 });
 
+
+const poiProcessor = (foursquareRes) => {
+
+  const places = foursquareRes.data.results.map((place) => ({
+    name: place.name,
+    address: place.location?.formatted_address || "",
+    categories: place.categories?.map((c) => c.name) || [],
+    distance: place.distance,
+    lat: place.geocodes?.main?.latitude,
+    lng: place.geocodes?.main?.longitude,
+  }));
+  return places
+}
+
+
+
+
+
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3004;
 app.listen(PORT, () => {
   console.log(`places microservice running on port ${PORT}`);
 });
