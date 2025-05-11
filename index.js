@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios"); // Import the axios library for making HTTP requests
+const axios = require("axios"); 
 const app = express();
 
 app.use(express.json());
@@ -23,15 +23,13 @@ const getCityCoordinates = async (city) => {
   }
 };
 
-
-
-
+// Entry point to the service
 app.post("/places", async (req, res) => {
   const { city, latitude, longitude } = req.body;
   console.log("Microservice received:", { city }, {latitude}, {longitude});
 
   try {
-
+    // If the user entered city
     if (city){
       const { latitude, longitude } = await getCityCoordinates(city);
       console.log("in (if city)", latitude, longitude)
@@ -47,6 +45,7 @@ app.post("/places", async (req, res) => {
             },
           });
           res.json({ city, places: poiProcessor(foursquareRes) }); 
+    // If the user entered lat and long coordinates
     }else if( latitude && longitude){
       console.log("in (if lat/ lon", latitude, longitude)
         const foursquareRes = await axios.get("https://api.foursquare.com/v3/places/search", {
@@ -65,33 +64,18 @@ app.post("/places", async (req, res) => {
       return res.status(400).json({ error: "City or Latitude/Longitude is required! " });
     }
 
-    // const places = foursquareRes.data.results.map((place) => ({
-    //   name: place.name,
-    //   address: place.location?.formatted_address || "",
-    //   categories: place.categories?.map((c) => c.name) || [],
-    //   distance: place.distance,
-    //   lat: place.geocodes?.main?.latitude,
-    //   lng: place.geocodes?.main?.longitude,
-    // }));
-
-    // res.status(200).json({
-    //   city,
-    //   coordinates: { latitude, longitude },
-    //   places,
-    // });
   } catch (error) {
     console.error("Error fetching places:", error.message);
     res.status(500).json({ error: "Failed to fetch places of interest" });
   }
 });
 
-
+// Helper function to process the data to be returned to main app.
 const poiProcessor = (foursquareRes) => {
-
   const places = foursquareRes.data.results.map((place) => ({
     name: place.name,
     address: place.location?.formatted_address || "",
-    categories: place.categories?.map((c) => c.name) || [],
+    categories: place.categories[0] || [],
     distance: place.distance,
     lat: place.geocodes?.main?.latitude,
     lng: place.geocodes?.main?.longitude,
