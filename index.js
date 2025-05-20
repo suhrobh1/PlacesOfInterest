@@ -75,7 +75,7 @@ const poiProcessor = (foursquareRes) => {
   const places = foursquareRes.data.results.map((place) => ({
     name: place.name,
     address: place.location?.formatted_address || "",
-    categories: place.categories.name || [],
+    categories: place.categories[0].name || [],
     distance: place.distance,
     lat: place.geocodes?.main?.latitude,
     lng: place.geocodes?.main?.longitude,
